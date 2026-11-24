@@ -5,6 +5,12 @@
   const DETAIL_CACHE = new Map();
   const SERIES_CACHE = new Map();
   const DEMO_URL = "/media/demo.mp4";
+  const signedOutAccount = { loggedIn: false, userId: "", nickname: "", avatar: "" };
+  let qrLoginId = "";
+
+  const style = document.createElement("style");
+  style.textContent = ".sidebar-foot .donate-btn,.sidebar-foot .author-sign{display:none!important}";
+  document.head.appendChild(style);
 
   const emptyPage = (extra = {}) => ({ items: [], cursor: "", hasMore: false, ...extra });
   const unique = (items) => [...new Set(items)];
@@ -35,8 +41,8 @@
     } catch {}
   };
 
-  async function requestJson(url) {
-    const response = await fetch(url, { credentials: "same-origin" });
+  async function requestJson(url, options = {}) {
+    const response = await fetch(url, { credentials: "same-origin", ...options });
     const body = await response.json().catch(() => ({}));
     if (!response.ok || body.success === false) {
       throw new Error(body.error || `HTTP ${response.status}`);
@@ -634,13 +640,16 @@
   }
 
   const handlers = {
-    Status: () => ({
-      starting: false,
-      ready: true,
-      error: "",
-      account: { loggedIn: false, userId: "", nickname: "", avatar: "" },
-      device: { ready: true, registering: false, error: "" },
-    }),
+    Status: async () => {
+      const body = await requestJson("/api/login/status").catch(() => ({}));
+      return {
+        starting: false,
+        ready: true,
+        error: "",
+        account: body.account || signedOutAccount,
+        device: { ready: true, registering: false, error: "" },
+      };
+    },
     AppInfo: () => ({
       version: "1.2.32",
       commit: "web",
@@ -865,12 +874,43 @@
     GetWindowRect: () => ({ x: 0, y: 0, w: window.innerWidth, h: window.innerHeight }),
     GetWorkArea: () => ({ x: 0, y: 0, w: window.innerWidth, h: window.innerHeight }),
     LoginRegions: () => [],
-    QRLoginStart: () => ({ token: "web", image: "", expireAt: 0 }),
-    QRLoginPoll: () => ({ state: "waiting", account: null }),
-    QRLoginCancel: () => true,
+    QRLoginStart: async () => {
+      const body = await requestJson("/api/login/qr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      qrLoginId = body.loginId;
+      return { token: "web", image: body.image, expiresIn: body.expiresIn, expireAt: 0 };
+    },
+    QRLoginPoll: async () => {
+      if (!qrLoginId) return { state: "expired", account: null };
+      const body = await requestJson(`/api/login/qr?id=${encodeURIComponent(qrLoginId)}`);
+      if (body.state !== "waiting") qrLoginId = "";
+      return { state: body.state, account: body.account || null };
+    },
+    QRLoginCancel: async () => {
+      const id = qrLoginId;
+      qrLoginId = "";
+      if (id) {
+        await requestJson("/api/login/qr/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ loginId: id }),
+        }).catch(() => {});
+      }
+      return true;
+    },
     SendCode: () => true,
     Login: () => true,
-    Logout: () => true,
+    Logout: async () => {
+      await requestJson("/api/login/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }).catch(() => {});
+      return true;
+    },
     ClipboardSeq: () => "",
     ShareLink: (seriesId, videoId) => {
       const series = SERIES_CACHE.get(String(seriesId));

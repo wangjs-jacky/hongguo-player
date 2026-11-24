@@ -43,6 +43,38 @@ test('open mode exposes an actor works page to anonymous visitors',async t=>{
  assert.equal(r.status,200);
  assert.equal((await r.json()).offset,1000);
 });
+test('web QR login exposes a real image and confirmed account without owner auth',async t=>{
+ const calls=[];
+ const account={
+  async startLogin(){return{success:true,loginId:'login-1',image:'data:image/png;base64,ZmFrZQ==',expiresIn:59};},
+  async pollLogin(id){calls.push(id);return{success:true,status:'signed-in',account:{id:'42',nickname:'测试账号'}};},
+  cancelLogin(id){calls.push('cancel:'+id);return{success:true};},
+  async status(){return{success:true,signedIn:true,account:{id:'42',nickname:'测试账号'}};},
+  async logout(){return{success:true};},
+ };
+ const{base}=await setup(t,{openAccess:true,account});
+ let r=await fetch(base+'/api/login/qr',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+ assert.equal(r.status,200);
+ const started=await r.json();
+ assert.equal(started.loginId,'login-1');
+ assert.equal(started.image,'ZmFrZQ==');
+ assert.equal(started.expiresIn,59);
+ r=await fetch(base+'/api/login/qr?id=login-1');
+ assert.equal(r.status,200);
+ const polled=await r.json();
+ assert.equal(polled.state,'confirmed');
+ assert.deepEqual(polled.account,{loggedIn:true,userId:'42',nickname:'测试账号',avatar:''});
+ assert.deepEqual(calls,['login-1']);
+ r=await fetch(base+'/api/login/status');
+ assert.equal(r.status,200);
+ assert.equal((await r.json()).account.loggedIn,true);
+ r=await fetch(base+'/api/login/qr/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({loginId:'login-1'})});
+ assert.equal(r.status,200);
+ assert.deepEqual(calls,['login-1','cancel:login-1']);
+ r=await fetch(base+'/api/login/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+ assert.equal(r.status,200);
+ assert.equal((await r.json()).signedIn,false);
+});
 test('serves the original app bundle, wails bindings and ranged media',async t=>{
  const{base}=await setup(t);
  let r=await fetch(base+'/');

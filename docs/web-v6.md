@@ -48,6 +48,14 @@
 
 同一播放会话允许同时保留预载流与可见流；此前“每个会话只保留一个流”的实现会让原版播放器先创建的流在第二次请求后返回 404。
 
+## 2026-11-25 登录二维码与侧栏修正
+
+- 适配层注入样式，隐藏原版侧栏底部的 `.donate-btn` 与 `.author-sign`，保留反馈和设置入口；不再显示“打赏作者 / 作者: hongguo-player”。
+- `QRLoginStart`、`QRLoginPoll`、`QRLoginCancel` 改为调用真实红果网页二维码接口；二维码图片按原版登录页要求返回 base64，状态映射为 waiting、confirmed、expired。
+- 新增 `server/web-account.cjs`，复用桌面版已验证的账号状态、Cookie 和二维码流程；Web 端凭据用 `.web-runtime` 本地 AES-256-GCM 密钥保存，`Logout` 清除。
+- 本机与公网 `https://hongguo.paws.rodeo/#/login` 均验证二维码为 512×512 且 `naturalWidth > 0`；侧栏两个元素计算样式为 `display:none`，反馈和设置仍显示。
+- 登录确认后的资料读取和持久化沿用 `src/native/account-session.js` 的既有实现；短信登录仍是原版占位。
+
 ## 验收
 
 - `npm run test:web`：26 项通过；覆盖原版首页、Wails bindings、CSP、hashed asset 缓存、视频 Range/HEAD，以及同会话多播放流。
@@ -60,7 +68,7 @@
 ## 限制
 
 - 原版首次使用引导仍会出现，属于 App 原始行为。
-- 登录、消息、下载等依赖 Wails 原生客户端的模块没有对应后端，保留原版空状态或本地占位，不伪造服务端数据。
+- 消息、下载等依赖 Wails 原生客户端的模块没有对应后端，保留原版空状态或本地占位，不伪造服务端数据；扫码登录已接通，短信登录仍为占位。
 - `hg-resolve` 二进制当前只提供 macOS arm64；其他平台仍回退旧 `web-v2` 取流。浏览器不支持 HEVC 时仍使用既有兼容回退。
 - 真实上游仍可能临时空响应或更换设备资格；失败时会记录 `hg-resolve` stderr，不以演示片冒充上游取流成功。
 - 公网入口依赖 Mac mini 上当前 Node 进程，尚未改为开机自启。

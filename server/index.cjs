@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const { Storage, fail, safeError, assertFields, numericId } = require('./storage.cjs');
 const defaultMedia = require('./media.cjs');
 const { search: searchHongguo } = require('./search.cjs');
+const { createWebAccountService, publicAccount } = require('./web-account.cjs');
 const PUBLIC = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
 const PUBLIC_ROOT = path.resolve(PUBLIC);
 const PUBLIC_TYPES = {
@@ -46,10 +47,11 @@ function actorRequest() {
   return (signed, requested) => require('../src/native/app-source').requestJson(signed.url,
     {...require('../src/native/web-media-guard').webMediaRequestOptions(signed.url),proxy:false,method:'GET',headers:signed.headers,preserveLargeIntegerFields:['celebrity_id','actor_id','user_id','series_id']}, Math.min(requested,deadline));
 }
-function createApp({ token, dataRoot, downloadRoot, media = defaultMedia, search = searchHongguo, autoStart = true, openAccess = false, ownerAuthPath }) {
+function createApp({ token, dataRoot, downloadRoot, media = defaultMedia, search = searchHongguo, autoStart = true, openAccess = false, ownerAuthPath, account = null }) {
   if (typeof token !== 'string' || token.length < 32 || token.length > 256 || /\s/.test(token)) throw fail('必须配置 32 至 256 字符的 HONGGUO_TOKEN，不得含空白');
   const digest = crypto.createHash('sha256').update(`Bearer ${token}`).digest();
   const store = new Storage(dataRoot, downloadRoot);
+  const accountService = account || createWebAccountService({ dataRoot });
   const {createOwnerAuth,OWNER_AGE}=require('./owner-access.cjs');
   const ownerAuth=createOwnerAuth(ownerAuthPath);
   const subscribers = new Set(), sessions = new Map(), streams = new Map();
@@ -170,6 +172,48 @@ function createApp({ token, dataRoot, downloadRoot, media = defaultMedia, search
       }
       const publicRead=request.method==='GET'&&(/^\/api\/(?:status|catalog|search|actors|source)$/.test(route)||/^\/api\/(?:series|actors|seasons|danmaku)\/\d{1,30}$/.test(route)||/^\/api\/actors\/\d{1,30}\/works$/.test(route));
       const publicPlayback=(request.method==='POST'&&['/api/session','/api/play','/api/prefetch','/api/logout'].includes(route))||(['GET','HEAD','DELETE'].includes(request.method)&&/^\/api\/stream\/[a-f0-9-]{36}$/.test(route));
+      if (request.method === 'POST' && route === '/api/login/qr') {
+        const result = await accountService.startLogin();
+        return send(200, {
+          success: true,
+          loginId: result.loginId,
+          image: String(result.image || '').replace(/^data:image\/[^;]+;base64,/i, ''),
+          expiresIn: result.expiresIn,
+        });
+      }
+      if (request.method === 'GET' && route === '/api/login/qr') {
+        const loginId = url.searchParams.get('id') || '';
+        try {
+          const result = await accountService.pollLogin(loginId);
+          const state = result.status === 'signed-in'
+            ? 'confirmed'
+            : result.status === 'expired' || result.status === 'cancelled'
+              ? 'expired'
+              : 'waiting';
+          return send(200, {
+            success: true,
+            state,
+            account: result.status === 'signed-in' ? publicAccount(result) : null,
+          });
+        } catch (error) {
+          if (/扫码会话已失效/.test(String(error?.message || ''))) return send(200, { success: true, state: 'expired' });
+          throw error;
+        }
+      }
+      if (request.method === 'POST' && route === '/api/login/qr/cancel') {
+        const payload = await body(request);
+        accountService.cancelLogin(String(payload.loginId || ''));
+        return send(200, { success: true });
+      }
+      if (request.method === 'GET' && route === '/api/login/status') {
+        const result = await accountService.status();
+        return send(200, { success: true, signedIn: Boolean(result.signedIn), account: publicAccount(result) });
+      }
+      if (request.method === 'POST' && route === '/api/login/logout') {
+        await body(request).catch(() => undefined);
+        await accountService.logout();
+        return send(200, { success: true, signedIn: false, account: publicAccount(null) });
+      }
       if(!owner&&!(openAccess&&(publicRead||publicPlayback))&&!(!openAccess&&mediaSession))throw fail('此功能仅限本人管理，请先使用本人授权入口登录',401);
       if (request.method === 'POST' && route === '/api/logout') {
         ownerAuth.revoke(request.headers.cookie);
