@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "reference": "https://ani.girigirilove.com/",
+    "mode": "内容适配与结构复刻",
+    "evidence": "SOURCE: deployed CSS and React route chunks; live reference blocked by region redirect"
+  },
+  "design_system": {
+    "background": "#f8f9fc",
+    "card": "#ffffff",
+    "foreground": "#252738",
+    "muted": "#6b6f83",
+    "accent": "#ef4470",
+    "border": "#e6e8f0",
+    "maxWidth": 1600,
+    "desktopHeaderHeight": 80,
+    "mobileHeaderHeight": 64,
+    "gridColumns": {
+      "small": 2,
+      "480": 3,
+      "768": 4,
+      "1024": 6
+    },
+    "posterRatio": "3/4",
+    "radius": 12,
+    "contentGap": 24
+  },
+  "design_style": {
+    "layout": "顶部频道与搜索；主图配侧列；内容模块；独立详情；视频加侧栏；手机底栏",
+    "voice": "简洁的频道与内容标签，标题来自真实剧集",
+    "effects": "CSS hover and theme transition; no decorative WebGL"
+  },
+  "adaptation": {
+    "brand": "红果剧场",
+    "data": "existing authenticated Hongguo API",
+    "sourceAssets": "not distributed",
+    "homeHero": "user-operated controls; no automatic business refresh"
+  }
+}

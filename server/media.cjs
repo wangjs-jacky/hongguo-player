@@ -42,7 +42,7 @@ function mediaGuard(value) {
   const redirect = guarded.beforeRedirect;
   return { ...guarded, proxy: false, beforeRedirect(options, response, request) { mediaGuard(new URL(response.headers.location, request.url).href); redirect(options, response, request); } };
 }
-async function series(id) {
+async function seriesFresh(id) {
   const result = await hongguo.fetchEpisodeList(numericId(id), { deadline: Date.now() + 25000 });
   const seen = new Set();
   if (String(result.series_id) !== id || !Array.isArray(result.episodes) || !result.episodes.length || result.episodes.length > 1000) throw fail('剧集目录无效', 502);
@@ -52,8 +52,9 @@ async function series(id) {
     seen.add(vid); return { vid, vid_index: index + 1, title: String(episode.title || '') };
   });
   if (Number(result.total) && Number(result.total) !== episodes.length) throw fail('剧集目录不完整', 502);
-  return { series_id: id, series_title: String(result.series_title || '未命名短剧'), cover: String(result.cover || ''), total: episodes.length, episodes };
+  return { intro: String(result.intro || ''), tags: result.tags || [], episode_label: result.episode_label || '', social_info: result.social_info || null, celebrities: result.celebrities || [], series_id: id, series_title: String(result.series_title || '未命名短剧'), cover: String(result.cover || ''), total: episodes.length, episodes };
 }
+function series(id) { return require('./query-cache.cjs').memo('series:' + numericId(id), 300000, () => seriesFresh(id)); }
 async function download(task, store, signal, update) {
   throwIfAborted(signal);
   const destination = store.output(task);
@@ -61,7 +62,7 @@ async function download(task, store, signal, update) {
   const detail = await series(task.seriesId);
   if (!detail.episodes.some(item => item.vid === task.vid && item.vid_index === task.episodeIndex)) throw fail('分集目录已改变，请重新选集');
   throwIfAborted(signal);
-  const info = await hongguo.fetchPlayUrlSingle(task.vid, task.seriesId, { quality: task.quality, signal });
+  const info = await require('./online.cjs').source(task.vid, task.quality, signal, task.seriesId);
   throwIfAborted(signal);
   if (!info?.url || info.locked || info.vid !== task.vid) throw Object.assign(fail(info?.error || '未取得完整可用片源'), { code: info?.code, sources: info?.sources });
   const work = fs.mkdtempSync(path.join(store.directory(task), '.download-'));
@@ -87,9 +88,16 @@ async function download(task, store, signal, update) {
     if (info.codec === 'bytevc2') await convertBytevc2({ executable: tools.librempeg, input, output, contentKey: key, duration: info.duration, signal, maxBytes: MAX_BYTES, onProgress: seconds => update(75 + Math.floor(Math.min(1, seconds / info.duration) * 20)) });
     else if (key) await run(tools.ffmpeg, ['-v', 'error', '-xerror', '-nostdin', '-protocol_whitelist', 'file,pipe', '-decryption_key', key, '-i', input, '-map', '0:v:0', '-map', '0:a?', '-c', 'copy', '-movflags', '+faststart', '-f', 'mp4', output], signal, 120000);
     else fs.renameSync(input, output);
+    // Web clients share H.264/AAC playback across Chrome, Safari and mobile.
+    const prepared = await probe(tools.ffprobe, output, task, signal);
+    if (prepared.codec !== 'h264' || (prepared.audio && prepared.audioStream?.codec_name !== 'aac')) {
+      const compatible = path.join(work, 'browser.mp4');
+      await run(tools.ffmpeg, ['-v', 'error', '-xerror', '-nostdin', '-protocol_whitelist', 'file,pipe', '-threads', '2', '-i', output, '-map', '0:v:0', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', '-fs', String(MAX_BYTES), compatible], signal, 300000);
+      fs.renameSync(compatible, output);
+    }
     update(96);
     const actual = await verify(output, task.quality, signal, Number(info.duration) || 0);
-    if (info.width && info.height && (actual.w !== Number(info.width) || actual.h !== Number(info.height))) throw fail('实际画面尺寸与片源不一致');
+    if (!info.dimensionHint && info.width && info.height && (actual.w !== Number(info.width) || actual.h !== Number(info.height))) throw fail('实际画面尺寸与片源不一致');
     signal.throwIfAborted(); store.output(task);
     publishMergedOutput(output, destination);
   } finally { fs.rmSync(work, { recursive: true, force: true }); }

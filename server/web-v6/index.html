@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>短剧播放器</title>
+    <link rel="stylesheet" href="/assets/index.c2f2550a.css" />
+    <script src="/adapter.js?v=20261123-web6"></script>
+    <script>
+      window.__wailsPreview = true;
+      window.addEventListener("error", (event) => {
+        window.__errors = [...(window.__errors || []), String(event.message || event.error)];
+      });
+      window.addEventListener("unhandledrejection", (event) => {
+        window.__errors = [...(window.__errors || []), String(event.reason?.stack || event.reason)];
+      });
+      window.WailsInvoke = (message) => {
+        if (typeof message !== "string" || message[0] !== "C") return;
+        const { name, args, callbackID } = JSON.parse(message.slice(1));
+        Promise.resolve()
+          .then(() => window.__wailsData?.(name, args ?? []) ?? null)
+          .then(
+            (result) => window.wails.Callback(JSON.stringify({ callbackid: callbackID, result })),
+            (error) => window.wails.Callback(JSON.stringify({ callbackid: callbackID, error: String(error?.message || error) })),
+          );
+      };
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" crossorigin src="/assets/index.e161c0d9.js"></script>
+  </body>
+</html>

@@ -23,7 +23,7 @@ function responseId(response, name) {
     return typeof value === 'string' && /^\d{1,30}$/.test(value) && /[1-9]/.test(value) ? value : '';
 }
 
-async function registerPlaybackDevice(requestJson, { signal } = {}) {
+async function registerPlaybackDevice(requestJson, { signal, profile } = {}) {
     throwIfAborted(signal);
     if (Date.now() < registrationRetryAfter) throw Object.assign(new Error('匿名播放设备注册失败，请检查网络，10 秒后重试'), {
         code: 'DEVICE_REGISTRATION_FAILED', registrationFailure: lastRegistrationFailure,
@@ -51,6 +51,7 @@ async function registerPlaybackDevice(requestJson, { signal } = {}) {
                 custom: { account_region_src: 'fallback', account_region: 'cn', host_bit: 64, dragon_device_type: 'phone' }, pre_installed_channel: '',
                 apk_first_install_time: now, is_system_app: 0, sdk_flavor: 'china', guest_mode: 0,
             };
+            if (profile === 'web-v2') Object.assign(header, {update_version_code:74332,manifest_version_code:74332,version_code:74332,app_version_minor:'7.4.3.32',app_version:'7.4.3.32'});
             const compressed = gzipSync(Buffer.from(JSON.stringify({ magic_tag: 'ss_app_log', header, _gen_time: now })));
             const random = crypto.randomBytes(32);
             const derived = crypto.createHash('sha512').update(Buffer.concat([
@@ -62,7 +63,7 @@ async function registerPlaybackDevice(requestJson, { signal } = {}) {
             const response = await requestJson(REGISTER_URL, {
                 method: 'POST',
                 headers: {
-                    'User-Agent': 'com.phoenix.read/72232 (Linux; U; Android 16; zh_CN; 25053RT47C; Build/BP2A.250605.031.A3)',
+                    'User-Agent': profile === 'web-v2' ? 'com.phoenix.read/74332 (Linux; U; Android 16; zh_CN; 25053RT47C; Build/BP2A.250605.031.A3; Cronet/TTNetVersion:04657795 2026-01-23 QuicVersion:c67e9834 2025-09-08)' : 'com.phoenix.read/72232 (Linux; U; Android 16; zh_CN; 25053RT47C; Build/BP2A.250605.031.A3)',
                     Accept: 'application/json', 'Content-Type': 'application/octet-stream;tt-data=a',
                     'log-encode-type': 'gzip', 'x-ss-dp': '8662', 'x-ss-req-ticket': String(now),
                     'x-vc-bdturing-sdk-version': '4.0.3.cn', lc: '101', 'sdk-version': '2',

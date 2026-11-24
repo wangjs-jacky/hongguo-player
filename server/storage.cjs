@@ -156,8 +156,8 @@ class Storage {
     return queued.length;
   }
   publicTask(task) {
-    const { id, type, seriesId, seriesTitle, episodeTitle, episodeIndex, status, progress, error, createdAt, updatedAt, quality } = task;
-    return { id, type, seriesId, seriesTitle, episodeTitle, episodeIndex, status, progress, error, createdAt, updatedAt, quality,
+    const { id, type, seriesId, seriesTitle, vid, episodeTitle, episodeIndex, status, progress, error, createdAt, updatedAt, quality } = task;
+    return { id, type, seriesId, seriesTitle, ...(type === 'download' ? {vid} : {}), episodeTitle, episodeIndex, status, progress, error, createdAt, updatedAt, quality,
       ...(status === 'completed' ? { file: path.relative(this.root, this.artifact(task).file) } : {}) };
   }
   save() {

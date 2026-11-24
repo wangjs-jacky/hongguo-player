@@ -352,7 +352,28 @@ function parseEpisodeListHtml(html, seriesId) {
     web_available: webAccessibleEpisodes === null ? null : i < webAccessibleEpisodes,
   }));
 
+  // Public metadata parsing adapted from hongguo-open-player (GPL-3.0-only).
+  const intro = typeof detail.series_intro === 'string' ? detail.series_intro.trim() : '';
+  const tags = Array.isArray(detail.tags) ? detail.tags.map(t => String(t).trim()).filter(Boolean) : [];
+  const episodeLabel = typeof detail.episode_right_text === 'string' ? detail.episode_right_text.trim() : '';
+  const celebrities = Array.isArray(detail.celebrities) ? detail.celebrities
+    .filter(c => c && !c.is_label && (c.nickname || c.name))
+    .map(c => ({
+      actor_id: String(c.celebrity_id || c.actor_id || ''),
+      name: String(c.nickname || c.name || '').trim(),
+      avatar: typeof c.avatar === 'string' ? c.avatar : '',
+      role: String(c.sub_title || c.role || '').trim()
+    })) : [];
+  const socialInfo = data?.seriesSocialInfo ? {
+    rating: Number(data.seriesSocialInfo.rating) || null,
+    rating_count: data.seriesSocialInfo.rating_count ? String(data.seriesSocialInfo.rating_count) : '',
+    hot_text: data.seriesSocialInfo.hot_score_data?.text || '',
+    like_count: data.seriesSocialInfo.series_like_count ? String(data.seriesSocialInfo.series_like_count) : '',
+    favorite_count: data.seriesSocialInfo.series_favorite_count ? String(data.seriesSocialInfo.series_favorite_count) : ''
+  } : null;
+
   return {
+    intro, tags, episode_label: episodeLabel, social_info: socialInfo, celebrities,
     series_id: String(seriesId),
     series_title: seriesTitle,
     cover: cover || (episodes[0] && episodes[0].cover) || '',

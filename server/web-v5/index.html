@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0e0e12">
+  <title>红果剧场 · 在线短剧</title>
+  <link rel="stylesheet" href="/styles.css?v=20261123-v5">
+  <script src="/app.js?v=20261123-v5" defer></script>
+</head>
+<body>
+  <a href="#main" class="skip-link">跳到主要内容</a>
+
+  <div class="frame">
+    <div class="shell" id="shell">
+      <aside class="sidebar" id="sidebar" aria-label="主导航">
+        <a href="#/recommend" class="brand side-brand" aria-label="红果剧场首页">
+          <span class="brand-symbol" data-icon="play"></span>
+          <span class="side-brand-text"><strong>红果剧场</strong><small>在线短剧</small></span>
+        </a>
+
+        <button class="side-toggle" id="side-toggle" type="button" aria-label="收起侧栏" title="收起侧栏">
+          <span class="side-toggle-icon" aria-hidden="true">‹</span>
+          <span class="nav-label">收起</span>
+        </button>
+
+        <nav class="nav" aria-label="内容导航">
+          <div class="nav-group first">发现</div>
+          <button class="nav-item" data-view="recommend" type="button">
+            <span class="nav-icon" data-icon="recommend"></span><span class="nav-label">推荐</span>
+          </button>
+          <button class="nav-item" data-view="discover" type="button">
+            <span class="nav-icon" data-icon="search"></span><span class="nav-label">找剧</span>
+          </button>
+          <button class="nav-item" data-view="rankings" type="button">
+            <span class="nav-icon" data-icon="rank"></span><span class="nav-label">排行榜</span>
+          </button>
+          <button class="nav-item" data-view="new" type="button">
+            <span class="nav-icon" data-icon="new"></span><span class="nav-label">新剧</span>
+          </button>
+          <button class="nav-item" data-view="actors" type="button">
+            <span class="nav-icon" data-icon="star"></span><span class="nav-label">剧星榜</span>
+          </button>
+
+          <div class="nav-group">我的</div>
+          <button class="nav-item" data-view="favorites" type="button">
+            <span class="nav-icon" data-icon="history"></span><span class="nav-label">收藏 / 历史 / 点赞</span><span class="nav-count" id="fav-count">0</span>
+          </button>
+          <button class="nav-item" data-view="tasks" type="button">
+            <span class="nav-icon" data-icon="download"></span><span class="nav-label">下载</span><span class="nav-count" id="side-task-count">0</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="side-divider"></div>
+          <button class="foot-ico" data-view="settings" type="button">
+            <span class="foot-emo" data-icon="settings"></span><span class="nav-label">设置</span>
+          </button>
+          <button class="foot-ico" data-view="mine" type="button">
+            <span class="foot-emo" data-icon="user"></span><span class="nav-label">我的 / 连接</span>
+          </button>
+          <div class="side-meta"><span class="dot" id="side-dot"></span><span id="side-connection">连接服务</span></div>
+        </div>
+      </aside>
+
+      <div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+      <main class="main" id="main">
+        <header class="topbar">
+          <button class="icon-button mobile-menu" id="mobile-menu" type="button" aria-label="打开导航">☰</button>
+          <div class="topbar-title">
+            <span id="crumb">推荐</span>
+            <small id="topbar-sub">今晚看点</small>
+          </div>
+          <form id="quick-search" class="top-search" role="search">
+            <span class="top-search-icon" data-icon="search"></span>
+            <input aria-label="搜索短剧" placeholder="搜索剧名、主演、题材">
+            <button type="submit">搜索</button>
+          </form>
+          <div class="topbar-actions">
+            <button id="mobile-search" class="icon-button" type="button" aria-label="搜索短剧"><span data-icon="search"></span></button>
+            <button id="theme-toggle" class="icon-button" type="button" aria-label="切换深浅主题"><span data-icon="sun"></span></button>
+            <button data-view="tasks" class="icon-button top-download" type="button" aria-label="下载管理"><span data-icon="download"></span><b id="task-count">0</b></button>
+            <button id="connect-top" class="account-button" type="button" aria-label="播放与设置"><span data-icon="user"></span><span id="connection">连接服务</span><span class="dot" id="dot"></span></button>
+          </div>
+        </header>
+
+        <div class="main-scroll" id="main-scroll">
+          <div class="page-wrap">
+            <div id="notice" class="notice" role="status" hidden></div>
+
+            <section id="view-recommend" class="view page">
+              <div class="page-head recommend-head">
+                <div>
+                  <span class="eyebrow">发现</span>
+                  <h1>推荐</h1>
+                  <p>按真实热度挑一部，接着向下看。</p>
+                </div>
+                <div id="home-state" class="state-inline" role="status"></div>
+              </div>
+
+              <div class="home-featured">
+                <div id="home-hero" class="hero-panel"></div>
+                <aside class="new-picks surface">
+                  <div class="section-heading">
+                    <h2>接下来</h2>
+                    <button data-view="discover" class="text-button" type="button">全部 <span data-icon="arrow-right"></span></button>
+                  </div>
+                  <div id="home-picks"></div>
+                </aside>
+              </div>
+
+              <div class="discovery-nav surface">
+                <div class="shortcut-links">
+                  <button data-view="rankings" type="button"><span data-icon="trending"></span>热门排行</button>
+                  <button data-view="history" type="button"><span data-icon="history"></span>继续观看</button>
+                  <button data-view="favorites" type="button"><span data-icon="heart"></span>我的收藏</button>
+                </div>
+                <div class="channel-links">
+                  <button data-browse-category="real-drama" type="button"><strong>真人短剧</strong><span>都市 · 古装 · 家庭</span></button>
+                  <button data-browse-category="comic-drama" type="button"><strong>漫剧</strong><span>玄幻 · 脑洞 · 热血</span></button>
+                  <button data-browse-category="ai-drama" type="button"><strong>AI 短剧</strong><span>新的故事形式</span></button>
+                </div>
+              </div>
+
+              <div id="home-continue-section" class="home-section" hidden>
+                <div class="section-heading">
+                  <h2>继续观看</h2>
+                  <button data-view="history" class="text-button" type="button">全部记录 <span data-icon="arrow-right"></span></button>
+                </div>
+                <div id="home-continue" class="continue-grid"></div>
+              </div>
+
+              <div class="home-section">
+                <div class="section-heading">
+                  <h2>热门短剧</h2>
+                  <button data-view="rankings" class="text-button" type="button">查看更多 <span data-icon="arrow-right"></span></button>
+                </div>
+                <div id="home-hot" class="poster-grid"></div>
+              </div>
+              <div class="home-section">
+                <div class="section-heading">
+                  <h2>真人短剧</h2>
+                  <button data-browse-category="real-drama" class="text-button" type="button">查看更多 <span data-icon="arrow-right"></span></button>
+                </div>
+                <div id="home-real" class="poster-grid"></div>
+              </div>
+              <div class="home-section">
+                <div class="section-heading">
+                  <h2>热门漫剧</h2>
+                  <button data-browse-category="comic-drama" class="text-button" type="button">查看更多 <span data-icon="arrow-right"></span></button>
+                </div>
+                <div id="home-comic" class="poster-grid"></div>
+              </div>
+              <div class="home-section">
+                <div class="section-heading">
+                  <h2>AI 短剧</h2>
+                  <button data-browse-category="ai-drama" class="text-button" type="button">查看更多 <span data-icon="arrow-right"></span></button>
+                </div>
+                <div id="home-ai" class="poster-grid"></div>
+              </div>
+            </section>
+
+            <section id="view-discover" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">发现</span>
+                  <h1>找剧</h1>
+                  <p>按类型和题材筛选，查看真实片库。</p>
+                </div>
+                <span class="muted" id="catalog-count"></span>
+              </div>
+              <div class="filter-panel surface">
+                <div class="filter-line">
+                  <span>类型</span>
+                  <div id="categories" class="chips">
+                    <button data-category="real-drama" class="selected" type="button">真人短剧</button>
+                    <button data-category="comic-drama" type="button">漫剧</button>
+                    <button data-category="ai-drama" type="button">AI 短剧</button>
+                  </div>
+                </div>
+                <div class="filter-line">
+                  <span>题材</span>
+                  <div id="genres" class="chips" aria-label="题材筛选"></div>
+                </div>
+              </div>
+              <div class="section-heading">
+                <h2>全部剧集</h2>
+                <button id="refresh-catalog" class="text-button" type="button">换一批</button>
+              </div>
+              <div id="catalog" class="poster-grid"></div>
+              <div id="catalog-state" class="empty" role="status"></div>
+              <div class="pager">
+                <button id="catalog-prev" type="button" hidden>上一页</button>
+                <span id="catalog-page"></span>
+                <button id="catalog-next" type="button" hidden>下一页</button>
+              </div>
+            </section>
+
+            <section id="view-search" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">找剧</span>
+                  <h1>搜索结果</h1>
+                  <p>搜索剧名、主演或题材。</p>
+                </div>
+              </div>
+              <form id="search-form" class="search-form">
+                <input id="query" aria-label="剧名" placeholder="输入你想看的剧名" maxlength="200" required>
+                <button class="primary" type="submit">搜索</button>
+              </form>
+              <div id="recent-searches" class="recent-searches"></div>
+              <p id="search-state" class="muted" role="status"></p>
+              <div id="results" class="poster-grid"></div>
+              <div class="pager">
+                <button id="prev" type="button" hidden>← 上一页</button>
+                <span id="page-label"></span>
+                <button id="next" type="button" hidden>下一页 →</button>
+              </div>
+            </section>
+
+            <section id="view-rankings" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">发现</span>
+                  <h1>排行榜</h1>
+                  <p>按来源榜单顺序展示真实热度。</p>
+                </div>
+              </div>
+              <div id="ranking-tabs" class="chips page-tabs">
+                <button data-rank="hot-drama" class="selected" type="button">综合榜</button>
+                <button data-rank="hot-real-drama" type="button">真人短剧</button>
+                <button data-rank="hot-comic-drama" type="button">漫剧</button>
+                <button data-rank="hot-ai-drama" type="button">AI 短剧</button>
+              </div>
+              <div id="ranking-state" class="muted" role="status"></div>
+              <div id="ranking-results" class="rank-list"></div>
+            </section>
+
+            <section id="view-new" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">发现</span>
+                  <h1>新剧</h1>
+                  <p>近期上架与更新中的短剧，按来源列表展示。</p>
+                </div>
+              </div>
+              <div id="new-tabs" class="chips page-tabs">
+                <button data-new-category="hot-drama" class="selected" type="button">全部</button>
+                <button data-new-category="real-drama" type="button">真人短剧</button>
+                <button data-new-category="comic-drama" type="button">漫剧</button>
+                <button data-new-category="ai-drama" type="button">AI 短剧</button>
+              </div>
+              <div id="new-state" class="muted" role="status"></div>
+              <div id="new-grid" class="poster-grid"></div>
+            </section>
+
+            <section id="view-actors" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">发现</span>
+                  <h1>剧星榜</h1>
+                  <p>看看正在被喜欢的面孔，发现他们的更多作品。</p>
+                </div>
+              </div>
+              <div class="section-heading">
+                <div id="actor-genders" class="chips">
+                  <button data-gender="all" class="selected" type="button">全部剧星</button>
+                  <button data-gender="female" type="button">女演员</button>
+                  <button data-gender="male" type="button">男演员</button>
+                </div>
+                <span id="actors-date" class="muted"></span>
+              </div>
+              <div id="actors-state" class="muted" role="status"></div>
+              <div id="actors" class="actors-grid"></div>
+              <div class="pager">
+                <button id="actors-prev" type="button" hidden>← 上一页</button>
+                <span id="actors-page"></span>
+                <button id="actors-next" type="button" hidden>下一页 →</button>
+              </div>
+            </section>
+
+            <section id="view-favorites" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">我的</span>
+                  <h1>收藏 / 历史 / 点赞</h1>
+                  <p>保存在当前浏览器，换设备不会自动同步。</p>
+                </div>
+              </div>
+              <div class="chips page-tabs">
+                <button data-view="favorites" class="selected" type="button">收藏</button>
+                <button data-view="history" type="button">历史</button>
+                <button data-view="likes" type="button">点赞</button>
+              </div>
+              <div id="favorites" class="poster-grid"></div>
+            </section>
+
+            <section id="view-history" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">我的</span>
+                  <h1>观看记录</h1>
+                  <p>进度保存在当前浏览器，点击继续。</p>
+                </div>
+                <button id="clear-history" class="text-button" type="button">清空观看记录</button>
+              </div>
+              <div class="chips page-tabs">
+                <button data-view="favorites" type="button">收藏</button>
+                <button data-view="history" class="selected" type="button">历史</button>
+                <button data-view="likes" type="button">点赞</button>
+              </div>
+              <div id="history" class="poster-grid"></div>
+            </section>
+
+            <section id="view-likes" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">我的</span>
+                  <h1>点赞</h1>
+                  <p>在本地保存你想再看一遍的短剧。</p>
+                </div>
+              </div>
+              <div class="chips page-tabs">
+                <button data-view="favorites" type="button">收藏</button>
+                <button data-view="history" type="button">历史</button>
+                <button data-view="likes" class="selected" type="button">点赞</button>
+              </div>
+              <div id="likes" class="poster-grid"></div>
+            </section>
+
+            <section id="view-tasks" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">我的</span>
+                  <h1>下载</h1>
+                  <p id="events-state">任务变化通过事件推送更新。</p>
+                </div>
+                <div class="page-actions">
+                  <button id="merge-selected" type="button" hidden>合并选中分集</button>
+                  <button id="refresh-tasks" type="button">刷新状态</button>
+                </div>
+              </div>
+              <div id="tasks" class="task-list"></div>
+            </section>
+
+            <section id="view-settings" class="view page" hidden>
+              <div class="page-head">
+                <div>
+                  <span class="eyebrow">设置</span>
+                  <h1>播放与连接</h1>
+                  <p>播放偏好保存在当前浏览器；下载与任务管理仅限本人。</p>
+                </div>
+              </div>
+              <div class="settings-layout">
+                <div class="settings-card">
+                  <h2>播放偏好</h2>
+                  <p>自动保存在当前浏览器，下次打开沿用。</p>
+                  <div class="preference-grid">
+                    <label>默认画质
+                      <select id="default-quality">
+                        <option value="auto">自动</option>
+                        <option value="720p">720P 优先</option>
+                        <option value="1080p">1080P 优先</option>
+                      </select>
+                    </label>
+                    <label>默认倍速
+                      <select id="default-rate">
+                        <option value="0.75">0.75×</option>
+                        <option value="1">1.0×</option>
+                        <option value="1.25">1.25×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2.0×</option>
+                      </select>
+                    </label>
+                    <label class="check-label"><input id="auto-next" type="checkbox" checked> 自动播放下一集</label>
+                    <label class="check-label"><input id="prefetch-next" type="checkbox" checked> 预载下一集</label>
+                  </div>
+                  <hr>
+                  <h3>弹幕</h3>
+                  <p>开关和样式在播放器内调整。弹幕只在启用时请求，不影响正片加载。</p>
+                  <hr>
+                  <h3>播放设备与诊断</h3>
+                  <p>使用独立匿名播放设备；仅在持续无法解析片源时尝试重新注册。</p>
+                  <div class="settings-actions">
+                    <button id="reset-device" type="button">重新注册播放设备</button>
+                    <button id="export-diagnostics" type="button">导出诊断</button>
+                  </div>
+                  <p id="device-state" role="status"></p>
+                  <p id="last-timing" class="muted">连接后可查看最近一次请求耗时。</p>
+                  <hr>
+                  <h3>快捷键</h3>
+                  <p>空格 / K 播放暂停 · ← → 跳转 5 秒 · ↑ ↓ 切集 · F 全屏 · M 静音 · J 选集</p>
+                </div>
+
+                <div class="settings-card">
+                  <h2>本人管理</h2>
+                  <p id="owner-state">浏览与播放公开；下载、任务和文件仅本人管理。</p>
+                  <p>请使用本人专属的一次性管理授权入口；登录后无需反复输入令牌。</p>
+                  <button id="owner-logout" type="button" hidden>退出本人管理</button>
+                </div>
+
+                <div class="settings-card" id="service-card">
+                  <div class="settings-icon">◒</div>
+                  <h2>红果 Web 服务</h2>
+                  <p>开放访问模式下会自动连接；需要管理权限时再输入令牌。</p>
+                  <form id="login-form">
+                    <label for="token">访问令牌</label>
+                    <input type="password" id="token" autocomplete="off" placeholder="输入服务端访问令牌" required>
+                    <div class="settings-actions">
+                      <button class="primary" id="login-button" type="submit">连接服务</button>
+                      <button type="button" id="logout">断开连接</button>
+                    </div>
+                  </form>
+                  <p id="login-state" role="status"></p>
+                  <hr>
+                  <h3>关于浏览器播放</h3>
+                  <p>支持的编码直接按需解密、分段播放，无需等待整集下载。设备不支持当前编码时，可切换兼容模式。</p>
+                  <p>兼容转换和下载共用单任务队列。上游拒绝或片源失效会显示实际错误，不会用预览片段替代完整剧集。</p>
+                  <div class="settings-actions">
+                    <button id="download-source" type="button">下载源码包</button>
+                  </div>
+                  <p class="muted" id="version">基于开源项目 hongguo-drama · GPL-3.0</p>
+                </div>
+              </div>
+            </section>
+
+            <section id="view-mine" class="view page" hidden>
+              <div class="mine-hero surface">
+                <div class="mine-avatar">果</div>
+                <div class="mine-copy">
+                  <span class="eyebrow">我的</span>
+                  <h1 id="mine-name">红果观众</h1>
+                  <p id="mine-state">正在读取当前空间…</p>
+                </div>
+                <button id="mine-connect" class="primary" type="button">连接服务</button>
+              </div>
+              <div class="stats-grid">
+                <button data-view="favorites" class="stat-card" type="button"><strong id="mine-favorites">0</strong><span>收藏</span></button>
+                <button data-view="history" class="stat-card" type="button"><strong id="mine-history">0</strong><span>历史</span></button>
+                <button data-view="likes" class="stat-card" type="button"><strong id="mine-likes">0</strong><span>点赞</span></button>
+                <button data-view="tasks" class="stat-card" type="button"><strong id="mine-tasks">0</strong><span>下载任务</span></button>
+              </div>
+              <div class="settings-card">
+                <h2>当前空间</h2>
+                <p>收藏、历史和点赞只保存在这个浏览器；下载任务由服务端保存。</p>
+                <div class="settings-actions">
+                  <button data-view="favorites" type="button">打开我的剧库</button>
+                  <button data-view="settings" type="button">播放与连接设置</button>
+                </div>
+              </div>
+            </section>
+
+            <section id="view-series" class="view page" hidden>
+              <div id="detail">
+                <div class="breadcrumb-row">
+                  <button id="close-detail" class="text-button" type="button">返回列表</button>
+                  <span>/</span><span>剧集详情</span>
+                </div>
+                <div id="detail-body"></div>
+              </div>
+            </section>
+
+            <section id="view-actor" class="view page" hidden>
+              <div id="actor-dialog">
+                <div class="breadcrumb-row">
+                  <button id="close-actor" class="text-button" type="button">返回</button>
+                  <span>/</span><span>演员主页</span>
+                </div>
+                <div id="actor-body"></div>
+              </div>
+            </section>
+
+            <section id="view-player" class="view page player-page" hidden>
+              <div id="player-dialog" class="watch-page">
+                <div class="watch-heading">
+                  <button id="close-player" type="button" aria-label="关闭播放器">返回详情</button>
+                  <strong id="player-title"></strong>
+                  <button id="toggle-episodes" type="button" aria-label="展开或收起选集">选集</button>
+                </div>
+                <div class="theater-layout">
+                  <div class="screen">
+                    <div id="video-stage" class="video-stage">
+                      <video id="video" playsinline preload="metadata"></video>
+                      <div id="danmaku-layer" class="danmaku-layer" aria-hidden="true"></div>
+                      <div id="player-loading" class="player-loading" hidden>
+                        <div class="loading-mark">▶</div>
+                        <strong id="loading-title">正在连接片源</strong>
+                        <p id="loading-detail">正在获取完整片源并准备播放…</p>
+                        <button id="cancel-prepare" type="button">返回选集</button>
+                      </div>
+                      <div class="video-controls" aria-label="播放器控制">
+                        <input id="video-seek" type="range" min="0" max="1000" value="0" aria-label="播放进度">
+                        <div class="video-control-row">
+                          <button id="video-play" type="button" aria-label="播放">▶</button>
+                          <button id="previous-episode" type="button" aria-label="上一集">⏮</button>
+                          <button id="next-episode" type="button" aria-label="下一集">⏭</button>
+                          <span id="video-time">0:00 / 0:00</span>
+                          <div class="control-spacer"></div>
+                          <label class="control-select">
+                            <span class="sr-only">播放画质</span>
+                            <select id="playback-quality" aria-label="播放画质">
+                              <option value="auto">自动画质</option>
+                              <option value="720p">720P</option>
+                              <option value="1080p">1080P</option>
+                            </select>
+                          </label>
+                          <label class="control-select">
+                            <span class="sr-only">播放速度</span>
+                            <select id="playback-rate" aria-label="播放速度">
+                              <option value="0.75">0.75×</option>
+                              <option value="1">1.0×</option>
+                              <option value="1.25">1.25×</option>
+                              <option value="1.5">1.5×</option>
+                              <option value="2">2.0×</option>
+                            </select>
+                          </label>
+                          <details class="control-menu">
+                            <summary aria-label="弹幕设置">弹幕</summary>
+                            <div class="control-panel danmaku-options">
+                              <strong>弹幕设置 <span id="danmaku-state"></span></strong>
+                              <label class="check-label"><input id="danmaku-enabled" type="checkbox"> 开启弹幕</label>
+                              <label>透明度 <input id="danmaku-opacity" type="range" min="0.2" max="1" step="0.1" value="0.8"></label>
+                              <label>速度
+                                <select id="danmaku-speed">
+                                  <option value="12">慢</option>
+                                  <option value="8" selected>正常</option>
+                                  <option value="5">快</option>
+                                </select>
+                              </label>
+                              <label>显示行数
+                                <select id="danmaku-rows">
+                                  <option value="3">3 行</option>
+                                  <option value="5" selected>5 行</option>
+                                  <option value="8">8 行</option>
+                                </select>
+                              </label>
+                              <button id="retry-danmaku" type="button">重新加载弹幕</button>
+                            </div>
+                          </details>
+                          <button id="video-mute" type="button" aria-label="静音">音量</button>
+                          <input id="video-volume" type="range" min="0" max="1" step="0.05" aria-label="音量">
+                          <details class="control-menu">
+                            <summary aria-label="播放设置">⚙</summary>
+                            <div class="control-panel">
+                              <strong>播放设置</strong>
+                              <button id="fill-mode" type="button" aria-pressed="false">填充画面</button>
+                              <button id="compatibility" type="button">兼容播放</button>
+                              <small>画面无法播放时使用：需要先下载本集并转换格式，可能等待较长时间。</small>
+                            </div>
+                          </details>
+                          <button id="fullscreen" type="button" aria-label="全屏">⛶</button>
+                        </div>
+                        <span id="player-state" role="status"></span>
+                      </div>
+                    </div>
+                    <p class="keyboard-hint">空格 播放/暂停　← → 快进/后退　↑ ↓ 切换分集　F 全屏　M 静音</p>
+                  </div>
+                  <div id="theater-sidebar" class="theater-sidebar">
+                    <div id="theater-info"></div>
+                    <div id="theater-extra"></div>
+                    <div id="episode-pages" class="chips"></div>
+                    <div id="theater-episodes" class="episode-grid"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <nav class="mobile-nav" aria-label="移动导航">
+      <button data-view="recommend" type="button"><span data-icon="recommend"></span>推荐</button>
+      <button data-view="discover" type="button"><span data-icon="search"></span>找剧</button>
+      <button data-view="rankings" type="button"><span data-icon="rank"></span>排行</button>
+      <button data-view="favorites" type="button"><span data-icon="heart"></span>收藏</button>
+      <button data-view="mine" type="button"><span data-icon="user"></span>我的</button>
+    </nav>
+  </div>
+</body>
+</html>

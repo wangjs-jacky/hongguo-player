@@ -87,6 +87,10 @@ dist-signed/
 # Windows build records
 WINDOWS_HANDOFF.md
 media/
+!server/public/media/
+!server/public/media/demo.mp4
+!server/web-v6/media/
+!server/web-v6/media/demo.mp4
 
 # Local release and preview material
 verification/
@@ -106,3 +110,5 @@ backups/
 /public/software
 
 /.superpowers/
+
+.web-runtime/

@@ -123,7 +123,7 @@ const Ladon = {
     return Buffer.concat([randomBytes, out]).toString('base64');
   },
 };
-function signPlayer({ query, body = null, ts, randField, ladonRandom }) {
+function signPlayer({ query, body = null, ts, randField, ladonRandom, installId = '' }) {
   if (typeof query !== 'string' || body !== null && !Buffer.isBuffer(body)) throw new TypeError('Final query string and raw Buffer body required');
   const aidValue = queryParam(query, 'aid');
   let aid = 1967n;
@@ -136,7 +136,7 @@ function signPlayer({ query, body = null, ts, randField, ladonRandom }) {
   if (ladonRandom === undefined) ladonRandom = crypto.randomBytes(4);
   const headers = { 'x-ss-req-ticket': String(timestamp * 1000n), 'x-khronos': String(timestamp),
     'x-ladon': Ladon.encrypt(timestamp, LICENSE_ID, aid, ladonRandom),
-    'x-argus': Argus.sign(query, stub, timestamp, aid, LICENSE_ID, queryParam(query, 'device_id') || '', '', randField) };
+    'x-argus': Argus.sign(query, stub, timestamp, aid, LICENSE_ID, queryParam(query, 'device_id') || '', installId, randField) };
   if (stub) headers['x-ss-stub'] = stub;
   return headers;
 }

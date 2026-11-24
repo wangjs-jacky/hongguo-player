@@ -1,0 +1,26 @@
+[
+  {
+    "date": "2026-11-15",
+    "register": "product",
+    "palette": "charcoal+cinema-red",
+    "typography": "system-CJK-650/400",
+    "skeleton": "topnav-theater",
+    "motion": "state-feedback",
+    "material": "matte",
+    "soul": 7,
+    "spectacle": 2,
+    "density": 7
+  },
+  {
+    "date": "2026-11-15",
+    "register": "product",
+    "palette": "warm-stone+vermilion",
+    "typography": "system-CJK-700/400",
+    "skeleton": "library-rail",
+    "motion": "feedback",
+    "material": "paper",
+    "soul": 6,
+    "spectacle": 2,
+    "density": 6
+  }
+]

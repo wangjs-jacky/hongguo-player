@@ -1,0 +1,3 @@
+const fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process');
+const root=path.resolve(__dirname,'..'),out=path.join(root,'.web-runtime','web-source.tar.gz');fs.mkdirSync(path.dirname(out),{recursive:true});
+execFileSync('/usr/bin/tar',['-czf',out+'.tmp','--exclude=.DS_Store','server','src','package.json','package-lock.json','README.md','LICENSE','NOTICE','THIRD-PARTY-NOTICES.md','docs/web.md','docs/web-v2.md','docs/web-v3.md','docs/web-v4.md','docs/web-v5.md','docs/web-v6.md','docs/web-owner-access.md','docs/layout-v4'],{cwd:root});fs.renameSync(out+'.tmp',out);console.log('Web源码包已生成');

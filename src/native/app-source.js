@@ -24,6 +24,7 @@ let playbackReadyAt = 0;
 let playbackRejection = null;
 let playbackEmptyRounds = 0;
 let playbackIdentityResetAt = 0;
+let webPlaybackIdentity;
 const VIDEO_API = 'https://api5-normal-sinfonlineb.fqnovel.com/novel/player/multi_video_model/v1/';
 const VIDEO_TAB_API = 'https://api5-normal-sinfonlineb.fqnovel.com/reading/bookapi/video_tab/multi_video_model/v1/';
 const PLAYER_API = 'https://api5-normal-sinfonlineb.fqnovel.com/novel/player/multi_video_model/player/v1';
@@ -462,6 +463,9 @@ async function fetchAppPlayUrl(vid, options = {}) {
                 try { return await fetchAppPlayUrlFresh(vid, options); }
                 catch (error) {
                     throwIfAborted(options.signal);
+                    if (options.protocol === 'web-v2' && ['EMPTY_RESPONSE', 'MISSING_MODEL'].includes(error.code)) {
+                        webPlaybackIdentity = undefined;
+                    }
                     const empty = error.code === 'EMPTY_RESPONSE';
                     const rejected = error.code === 'BUSINESS_REJECTED' && Number(error.businessCode) === 110001;
                     if (identityRotated || (!empty && !rejected)) throw error;
@@ -506,6 +510,45 @@ async function fetchAppPlayUrl(vid, options = {}) {
     } finally { options.signal.removeEventListener('abort', cancel); }
 }
 
+function requestWebJson(url, options, deadline, signal) {
+    return requestJson(url, {
+        ...require('./web-media-guard').webMediaRequestOptions(url),
+        ...options,
+        proxy: false,
+    }, deadline, signal);
+}
+
+async function registeredWebIdentity(signal) {
+    const file = process.env.HONGGUO_WEB_DEVICE_FILE;
+    if (file) {
+        try {
+            const value = JSON.parse(require('node:fs').readFileSync(file, 'utf8'));
+            if (['device_id', 'iid'].every(key => typeof value[key] === 'string' && /^\d{10,30}$/.test(value[key]))
+                && /^[a-f0-9-]{36}$/i.test(value.cdid)) return value;
+        } catch {}
+    }
+    const value = await registerPlaybackDevice(requestWebJson, { signal, profile: 'web-v2' });
+    if (file) require('node:fs').writeFileSync(file, JSON.stringify(value), { mode: 0o600 });
+    return value;
+}
+
+async function resetWebPlaybackDevice() {
+    const pending = playbackQueue.then(async () => {
+        const value = await registerPlaybackDevice(requestWebJson, { profile: 'web-v2' });
+        const file = process.env.HONGGUO_WEB_DEVICE_FILE;
+        if (file) {
+            const fs = require('node:fs'), tmp = file + '.tmp';
+            fs.writeFileSync(tmp, JSON.stringify(value), { mode: 0o600 });
+            fs.renameSync(tmp, file);
+        }
+        webPlaybackIdentity = Promise.resolve(value);
+        playbackRejection = null;
+        return { registered: true };
+    });
+    playbackQueue = pending.catch(() => {});
+    return pending;
+}
+
 async function fetchAppPlayUrlFresh(vid, options) {
     const payload = JSON.stringify({
         biz_param: { detail_page_version: 0, device_level: 1, disable_digg_stat: false, disable_video_relate_book: false, need_all_video_definition: true, need_mp4_align: false, use_os_player: false, use_server_dns: false, video_platform: 1024 },
@@ -515,7 +558,14 @@ async function fetchAppPlayUrlFresh(vid, options) {
     // Reusing one identity avoids turning a transient upstream refusal into an
     // identity-registration storm. Rotation is paced by fetchAppPlayUrl.
     const getIdentity = playbackDevice.getPlaybackDevice || playbackDevice.registerPlaybackDevice;
-    const identity = await getIdentity(requestJson, { signal: options.signal });
+    const web = options.protocol === 'web-v2';
+    const identity = web
+        ? await (webPlaybackIdentity ||= registeredWebIdentity(options.signal).catch(error => {
+            webPlaybackIdentity = undefined;
+            throw error;
+        }))
+        : await getIdentity(requestJson, { signal: options.signal });
+    const send = web ? requestWebJson : requestJson;
     throwIfAborted(options.signal);
     // Registration has its own 8s budget; it must not consume the model request budget.
     const deadline = Date.now() + 12000;
@@ -539,7 +589,7 @@ async function fetchAppPlayUrlFresh(vid, options) {
             const route = createRoute();
             for (let attempt = 0; attempt < 2; attempt++) {
                 try {
-                    response = await requestJson(route.url, { method: route.method, headers: route.headers, data: route.body }, deadline, signal);
+                    response = await send(route.url, { method: route.method, headers: route.headers, data: route.body }, deadline, signal);
                     lastError = undefined;
                     break;
                 } catch (error) {
@@ -589,7 +639,7 @@ async function fetchAppPlayUrlFresh(vid, options) {
         const readFallback = async () => {
             const fallback = parseFallback(model.fallback_api);
             if (!fallback) throw Object.assign(new Error('App 接口未返回本集片源地址'), { code: 'MISSING_MODEL' });
-            const outer = await requestJson(fallback, { headers: { 'User-Agent': VIDEO_UA } }, deadline, signal);
+            const outer = await send(fallback, { headers: { 'User-Agent': VIDEO_UA } }, deadline, signal);
             throwIfAborted(signal);
             if ([outer, outer.video_info].some(value => Number(value?.Code || value?.code || 0) !== 0)) {
                 throw Object.assign(new Error('App 接口暂未提供本集播放信息'), { code: 'BUSINESS_REJECTED' });
@@ -697,6 +747,11 @@ function parseAppPlayModel(info, vid, options, inline, requireEncryptionMetadata
                     if (seen.has(identity)) continue;
                     seen.add(identity);
                     variants.push({ url, contentKey, codec: selected.codec === 'bytevc1' ? 'hevc' : selected.codec, source: 'app', vid,
+                        ...(options.protocol === 'web-v2' ? {
+                            duration: Number(info.video_duration) || 0,
+                            width: selected.width,
+                            height: selected.height,
+                        } : {}),
                         userAgent: inline ? PLAYBACK_UA : VIDEO_UA, quality: allowLowerQuality ? (selected.width && selected.height ? `${Math.min(selected.width, selected.height)}p` : '') : requestedQuality === 'auto' ? selected.quality : requestedQuality,
                         ...(requestedQuality === 'auto' ? {} : { width: selected.width, height: selected.height }) });
                     if (selected.codec === 'bytevc2') Object.assign(variants[variants.length - 1], {
@@ -717,4 +772,4 @@ function parseAppPlayModel(info, vid, options, inline, requireEncryptionMetadata
         });
 }
 
-module.exports = { fetchAppPlayUrl, signedSearchRequest, signedMetadataRequest, signedAccountRequest, parseSearchInteger, preserveLargeJsonIntegers, requestJson, SEARCH_API, SEARCH_UA };
+module.exports = { resetWebPlaybackDevice, fetchAppPlayUrl, signedSearchRequest, signedMetadataRequest, signedAccountRequest, parseSearchInteger, preserveLargeJsonIntegers, requestJson, SEARCH_API, SEARCH_UA };

@@ -21,14 +21,25 @@ async function main() {
     if (!candidates.length) throw new Error('目录没有红果剧集');
     receipt.quality = '1080p';
     const wait = async ids => {
-      const deadline = Date.now() + 5 * 60000;
-      while (Date.now() < deadline) {
-        const tasks = (await api('/api/tasks')).tasks.filter(task => ids.includes(task.id));
-        if (tasks.some(task => ['failed', 'cancelled', 'interrupted'].includes(task.status))) throw new Error(tasks.find(task => task.error)?.error || '任务停止');
-        if (tasks.length === ids.length && tasks.every(task => task.status === 'completed')) return tasks;
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-      throw new Error('真实素材任务超时');
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(),5 * 60000);
+      try {
+        const response = await fetch(base + '/api/events',{headers:{Authorization:`Bearer ${token}`},signal:controller.signal});
+        if(!response.ok)throw new Error('任务事件连接失败');
+        const reader = response.body.getReader(), decoder = new TextDecoder();let buffer = '';
+        for (;;) {
+          const {done,value} = await reader.read();if(done)throw new Error('任务事件连接已关闭');
+          buffer += decoder.decode(value,{stream:true});let boundary;
+          while((boundary=buffer.indexOf('\n\n'))>=0) {
+            const event=buffer.slice(0,boundary);buffer=buffer.slice(boundary+2);
+            if(!event.startsWith('data: '))continue;
+            const tasks=(JSON.parse(event.slice(6)).tasks||[]).filter(task=>ids.includes(task.id));
+            if(tasks.some(task=>['failed','cancelled','interrupted'].includes(task.status)))throw new Error(tasks.find(task=>task.error)?.error||'任务停止');
+            if(tasks.length===ids.length&&tasks.every(task=>task.status==='completed'))return tasks;
+          }
+        }
+      } finally { clearTimeout(timer);controller.abort(); }
+
     };
     let candidate, series, selected, downloads, lastError;
     const randomCandidates = [...candidates].sort(() => Math.random() - 0.5).slice(0, 4);
